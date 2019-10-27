@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="keywords" content="luminus, clojure, framework, leiningen">
+    <meta name="canonical" content="http://luminusweb.net">
+    <title>Luminus - a Clojure web framework</title>
+    <link href='http://fonts.googleapis.com/css?family=Inconsolata' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.1/styles/color-brewer.min.css">
+    <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/img/favicon.ico" type="image/x-icon">
+    <link href="/css/highlight.css" rel="stylesheet" type="text/css" />
+    <link href="/css/codestyle.css" rel="stylesheet" type="text/css" />
+    <link href="/css/screen.css" rel="stylesheet" type="text/css" />
+    
+  </head>
+  <body>
+    <header>
+      <div class="wrapper">
+        <div class="column-wrapper">
+          <div class="row">
+            <div id="logo">
+              <h1>
+                <a href="/">
+                  <img src="/img/logo.png" alt="Luminus">
+                  Luminus
+                </a>
+              </h1>
+            </div>
+            <nav>
+              <ul>
+                <li >
+                  <a href="/">Home</a>
+                </li>
+                <li  class="selected">
+                  <a href="/docs/guestbook">
+                    <span class="show-on-mobile">Docs</span>
+                    <span class="hide-on-mobile">Documentation</span>
+                  </a>
+                </li>
+                <li >
+                  <a href="/contribute">
+                    <span class="hide-on-mobile">Get Involved</span>
+                    <span class="show-on-mobile">Contrib</span>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+          
+          
+        </div>
+      </div>
+    </header>
+    <div class="wrapper">
+      
+<div class="row">
+  <div class="column column-75">
+    <div class="column-wrapper">
+      <h1>Response types</h1>
+      
+      <h2>Contents</h2>
+      <ol class="contents"><li><a href="#responses">Responses</a></li><li><a href="#response_encoding">Response encoding</a></li><li><a href="#setting_headers">Setting headers</a></li><li><a href="#setting_content_type">Setting content type</a></li><li><a href="#setting_custom_status">Setting custom status</a></li><li><a href="#redirects">Redirects</a></li></ol>
+      
+      <div id="content">
+        <h2 id="responses">Responses</h2><p>Ring responses are generated using the <a href='https://github.com/metosin/ring-http-response'>ring-http-response</a> library. The library provides a number of helpers for producing responses with their respective HTTP Status codes.</p><p>For example, the <code>ring.util.http-response/ok</code> helper is used to generate a response with the status <code>200</code>. The following code will produce a valid response map with the content set as its <code>:body</code> key.</p><pre><code class="clojure">&#40;ok {:foo &quot;bar&quot;}&#41;
+
+;;result of calling response
+{:status  200
+ :headers {}
+ :body    {:foo &quot;bar&quot;}}
+</code></pre><p>The response body can be one of a string, a sequence, a file, or an input stream. The body must correspond appropriately with the response's status code.</p><p>A string, it will be sent back to the client as is. For a sequence, a string representing each element is sent to the client. Finally, if the response is a file or an input stream, then the server sends its contents to the client.</p><h3 id="response&#95;encoding">Response encoding</h3><p>By default, the <a href='https://github.com/metosin/muuntaja'>muuntaja</a> middleware library is used to infer the response type when a route returns a map containing the <code>:body</code> key:</p><pre><code class="clojure">&#40;GET &quot;/json&quot; &#91;&#93; {:body {:foo &quot;bar&quot;}}&#41;
+</code></pre><p>The middleware is found in the <code>&lt;app-name&gt;.middleware</code> namespace of your application. The middleware function is called <code>wrap-formats</code>:</p><pre><code class="clojure">&#40;defn wrap-formats &#91;handler&#93;
+  &#40;let &#91;wrapped &#40;-&gt; handler wrap-params wrap-format&#41;&#93;
+    &#40;fn &#91;request&#93;
+      ;; disable wrap-formats for websockets
+      ;; since they're not compatible with this middleware
+      &#40;&#40;if &#40;:websocket? request&#41; handler wrapped&#41; request&#41;&#41;&#41;&#41;
+</code></pre><p>Muuntaja will use the <code>Content-Type</code> header to infer the content of the request, and the <code>Accept</code> header to infer the response format.</p><h4 id="adding&#95;custom&#95;encoders&#95;with&#95;muuntaja">Adding custom encoders with Muuntaja</h4><p>Some types might not have default encoders available and cannot be serialized automatically. For example, if you're using <a href='https://github.com/clj-time/clj-time'>clj-time</a> it would be nice to have the DateTime objects it produces serialize automatically.</p><p>Here's an example of how we can add a custom serializer for <code>org.joda.time.DateTime</code> objects generated by cljs-time using <a href='https://github.com/cognitect/transit-clj'>transit</a>.</p><p>First, we'll need to require the namespaces for working with clj-time and transit:</p><pre><code class="clojure">&#40;ns &lt;app&gt;.middleware
+  &#40;:require
+   ...
+   &#91;cognitect.transit :as transit&#93;
+   &#91;clj-time.coerce :as coerce&#93;
+   &#91;muuntaja.core :as m&#93;
+   &#91;muuntaja.format.transit :as formats&#93;&#41;&#41;
+</code></pre><p>Next, we'll add a transit writer for the <code>org.joda.time.DateTime</code> type:</p><pre><code class="clojure">&#40;def joda-time-writer
+  &#40;transit/write-handler
+    &#40;constantly &quot;m&quot;&#41;
+    &#40;fn &#91;v&#93; &#40;-&gt; &#94;org.joda.time.ReadableInstant v .getMillis&#41;&#41;
+    &#40;fn &#91;v&#93; &#40;-&gt; &#94;org.joda.time.ReadableInstant v .getMillis .toString&#41;&#41;&#41;&#41;
+</code></pre><p>Finally, we'll update the default options passed to <code>wrap-format</code> to let it know that we'd like to use <code>joda-time-writer</code> for this type:</p><pre><code class="clojure">&#40;def wrap-format-options
+  &#40;update
+    m/default-options
+    :formats
+    merge
+    {&quot;application/transit+json&quot;
+     {:decoder &#91;&#40;partial formats/make-transit-decoder :json&#41;&#93;
+      :encoder &#91;#&#40;formats/make-transit-encoder
+                   :json
+                   &#40;merge
+                     %
+                     {:handlers {org.joda.time.DateTime joda-time-writer}}&#41;&#41;&#93;}}&#41;&#41;
+
+&#40;defn wrap-formats &#91;handler&#93;
+  &#40;let &#91;wrapper &#40;-&gt; handler wrap-params &#40;wrap-format wrap-format-options&#41;&#41;&#93;
+    &#40;fn &#91;request&#93;
+      ;; disable wrap-formats for websockets
+      ;; since they're not compatible with this middleware
+      &#40;&#40;if &#40;:websocket? request&#41; handler wrapped&#41; request&#41;&#41;&#41;&#41;
+</code></pre><p>The dates produced by clj-time will now be automatically serialized when returned as part of the response.</p><h3 id="setting&#95;headers">Setting headers</h3><p>Setting additional response headers is done by calling <code>ring.util.http-response/header</code>, and passing it a map of HTTP headers. Note that the keys <strong>must</strong> be strings.</p><pre><code class="clojure">&#40;-&gt; &quot;hello world&quot; response &#40;header &quot;x-csrf&quot; &quot;csrf&quot;&#41;&#41;
+</code></pre><h3 id="setting&#95;content&#95;type">Setting content type</h3><p>You can set a custom response type by using the <code>ring.util.http-response/content-type</code> function, eg:</p><pre><code class="clojure">&#40;GET &quot;/project&quot; &#91;&#93;
+  &#40;-&gt; &#40;clojure.java.io/input-stream &quot;report.pdf&quot;&#41;
+      ok
+      &#40;content-type &quot;application/pdf&quot;&#41;&#41;&#41;
+</code></pre><h3 id="setting&#95;custom&#95;status">Setting custom status</h3><p>Setting a custom status is accomplished by passing the content to the <code>ring.util.http-response/status</code> function:</p><pre><code class="clojure">&#40;GET &quot;/missing-page&quot; &#91;&#93;
+  &#40;-&gt; &quot;your page could not be found&quot;
+      ok
+      &#40;status 404&#41;&#41;&#41;
+</code></pre><h3 id="redirects">Redirects</h3><p>Redirects are handled by the <code>ring.util.http-response/found</code> function. The function will set a <code>302</code> redirect status on the response.</p><pre><code class="clojure">&#40;GET &quot;/old-location&quot; &#91;&#93;
+  &#40;found &quot;/new-location&quot;&#41;&#41;
+</code></pre><p>Please refer to the <a href='https://github.com/metosin/ring-http-response/blob/master/src/ring/util/http_response.clj'>ring-http-response</a> to see other available helpers.</p>
+      </div>
+    </div>
+  </div>
+  <div class="column column-25">
+    <div class="column-wrapper">
+      <div id="build-tool-div">
+        <p>Build Tool:
+          <select name="build-tool" id="build-tool" >
+            <option value="lein" >lein</option>
+            <option value="boot" >boot</option>
+          </select>
+        </p>
+      </div>
+      <h2>Topics</h2>
+      <ul>
+        
+        <li >
+          <a href="/docs/guestbook.html">
+            Your First Application
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/repl.html">
+            REPL Driven Development
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/profiles.html">
+            Application Profiles
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/html_templating.html">
+            HTML Templating
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/assets.html">
+            Static Assets
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/clojurescript.html">
+            ClojureScript
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/routes.html">
+            Routing
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/services.html">
+            RESTful Services
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/requests.html">
+            Request types
+          </a>
+        </li>
+        
+        <li class="selected" >
+          <a href="/docs/responses.html">
+            Response types
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/websockets.html">
+            Websockets
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/middleware.html">
+            Middleware
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/sessions_cookies.html">
+            Sessions and Cookies
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/input_validation.html">
+            Input Validation
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/security.html">
+            Security
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/components.html">
+            Component Lifecycle
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/database.html">
+            Database Access
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/migrations.html">
+            Database Migrations
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/logging.html">
+            Logging
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/i18n.html">
+            Internationalization
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/testing.html">
+            Testing
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/servers.html">
+            Server Tuning
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/environment.html">
+            Environment Variables
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/deployment.html">
+            Deployment
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/useful_libraries.html">
+            Useful Libraries
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/apps.html">
+            Sample Applications
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/upgrading.html">
+            Upgrading
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/learning_clojure.html">
+            Clojure Resources
+          </a>
+        </li>
+        
+      </ul>
+      <h2>Books</h2>
+      <ul>
+        <li>
+          <a href="https://pragprog.com/book/dswdcloj2/web-development-with-clojure-second-edition">
+            <img src="/img/wdwc2.png" class="bookimage">
+          </a>
+        </li>
+        <li><a href=""></a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+    </div>
+    <footer>
+      <article class="wrapper">
+        <div class="column-wrapper">
+          <p>
+            Luminus framework is released under the <a href="http://opensource.org/licenses/MIT">MIT License</a>
+            -
+            Copyright ©
+            <span id="cpyear"></span>
+          </p>
+        </div>
+      </article>
+    </footer>
+
+    <script src="/js/highlight.pack.js" type="text/javascript"></script>
+    <script src="/js/site.js" type="text/javascript"></script>
+    
+<script src="/js/docs.js" type="text/javascript"></script>
+
+  </body>
+</html>

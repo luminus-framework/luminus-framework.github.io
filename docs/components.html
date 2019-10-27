@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="keywords" content="luminus, clojure, framework, leiningen">
+    <meta name="canonical" content="http://luminusweb.net">
+    <title>Luminus - a Clojure web framework</title>
+    <link href='http://fonts.googleapis.com/css?family=Inconsolata' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.1/styles/color-brewer.min.css">
+    <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/img/favicon.ico" type="image/x-icon">
+    <link href="/css/highlight.css" rel="stylesheet" type="text/css" />
+    <link href="/css/codestyle.css" rel="stylesheet" type="text/css" />
+    <link href="/css/screen.css" rel="stylesheet" type="text/css" />
+    
+  </head>
+  <body>
+    <header>
+      <div class="wrapper">
+        <div class="column-wrapper">
+          <div class="row">
+            <div id="logo">
+              <h1>
+                <a href="/">
+                  <img src="/img/logo.png" alt="Luminus">
+                  Luminus
+                </a>
+              </h1>
+            </div>
+            <nav>
+              <ul>
+                <li >
+                  <a href="/">Home</a>
+                </li>
+                <li  class="selected">
+                  <a href="/docs/guestbook">
+                    <span class="show-on-mobile">Docs</span>
+                    <span class="hide-on-mobile">Documentation</span>
+                  </a>
+                </li>
+                <li >
+                  <a href="/contribute">
+                    <span class="hide-on-mobile">Get Involved</span>
+                    <span class="show-on-mobile">Contrib</span>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+          
+          
+        </div>
+      </div>
+    </header>
+    <div class="wrapper">
+      
+<div class="row">
+  <div class="column column-75">
+    <div class="column-wrapper">
+      <h1>Component Lifecycle</h1>
+      
+      <h2>Contents</h2>
+      <ol class="contents"><li><a href="#managing_component_lifecycle">Managing Component Lifecycle</a></li></ol>
+      
+      <div id="content">
+        <p>Luminus encourages using the <a href='https://blog.8thlight.com/uncle-bob/2012/08/13/the-clean-architecture.html'>Clean Architecture</a> style for writing web applications.</p><p>The workflows in web applications are typically driven by the client requests. Since requests will often require interaction with a resource, such as a database, we will generally have to access that resource from the route handling the request. In order to isolate the stateful code, we should have our top level functions deal with managing the side effects.</p><p>Consider a route that facilitates user authentication. The client will supply the username and the password in the request. The route will have to pull the user credentials from the database and compare these to the ones supplied by the client. Then a decision is made whether the user logged in successfully or not, and its outcome communicated back to the client.</p><p>In this workflow, the code that deals with the external resources should be localized to the namespace that provides the route and the namespace that handles the database access.</p><p>The route handler function will be responsible for calling the function that fetches the credentials from the database. The code that determines whether the password and username match represents the core business logic. This code should be pure and accept the supplied credentials along with those found in the database explicitly. This structure can be seen in the diagram below.</p><pre><code>            pure code
++----------+
+| business |
+|  logic   |
+|          |
++-----+----+
+      |
+------|---------------------
+      |     stateful code
++-----+----+   +-----------+
+|  route   |   |           |
+| handlers +---+  database |
+|          |   |           |
++----------+   +-----------+
+</code></pre><p>Keeping the business logic pure ensures that we can reason about it and test it without considering the external resources. Meanwhile, the code that deals with side effects is pushed to a thin outer layer, making it easy for us to manage.</p><h2 id="managing&#95;component&#95;lifecycle">Managing Component Lifecycle</h2><p>The management of stateful components, such as database connections, is handled by the <a href='https://github.com/tolitius/mount'>mount</a> library. The library handles the lifecycle of such resources within the application ensuring that any such resources are started and stopped as necessary.</p><p>Luminus encourages keeping related domain logic close together. Therefore, in cases where we have functions that rely on an external resource the management of the state for that resource should be handled in the same namespace where the functions using it are defined.  </p><p>Stateful components belong to the namespace they're declared in. To create a component we need to reference the <code>mount.core/defstate</code> macro in the namespace definition and then use it as follows:</p><pre><code class="clojure">&#40;ns myapp.resource
+  &#40;:require &#91;mount.core :refer &#91;defstate&#93;&#93;&#41;&#41;
+
+&#40;defn connect &#91;&#93;
+  ;;open-a-remote-connection should return the connection instance
+  {:state :connected}&#41;
+  
+&#40;defn disconnect &#91;conn&#93;
+  &#40;assoc conn :state :disconnected&#41;&#41;
+
+&#40;defstate conn
+  :start &#40;connect&#41;
+  :stop &#40;disconnect conn&#41;&#41;
+</code></pre><p>When the component is started the function bound to the <code>:start</code> key will be called. It's result will be used as the value for the state. In the example above, the <code>conn</code> will contain the map returned by the <code>connect</code> function.</p><p>When the component is shut down then the function bound to the <code>:stop</code> key is called. This function must accept the current state of the var. The function is expected to clean up any external resources before the component is shutdown.</p><p>The component dependencies are inferred from the namespace hierarchy. If namespace <code>a</code> references namespace <code>b</code> then the component specified using <code>defstate</code> in namespace <code>b</code> will be started before the one specified in namespace <code>a</code>. When the system is shutdown the <code>:stop</code> functions for each state are called in the reverse order.</p><p>For example, we may have one namespace that loads the configuration and another that used the configuration to connect to a database. This could be expressed as follows:</p><pre><code class="clojure">&#40;ns &lt;app&gt;.config
+  &#40;:require &#91;cprop.core :refer &#91;load-config&#93;&#93;
+            &#91;cprop.source :refer &#91;from-resource&#93;&#93;
+            &#91;mount.core :refer &#91;args defstate&#93;&#93;&#41;&#41;
+
+&#40;defstate env :start &#40;load-config :merge &#91;&#40;args&#41;&#93;&#41;&#41;
+</code></pre><p>The <code>&lt;app&gt;.config</code> namespace loads the config into the <code>env</code> state var. We can now access this config in a different namespace:</p><pre><code class="clojure">&#40;ns app.db
+  &#40;:require &#91;mount.core :refer &#91;defstate&#93;&#93;
+            &#91;app.config :refer &#91;env&#93;&#93;&#41;&#41;
+
+&#40;defn connect! &#91;config&#93; ...&#41;
+
+&#40;defn disconnect! &#91;conn&#93; ...&#41;
+
+&#40;defstate conn :start &#40;connect! env&#41;
+               :stop &#40;disconnect! conn&#41;&#41;
+</code></pre><p>The component hierarchy is initialized by calling <code>mount.core/start</code> and stopped with <code>mount.core/stop</code>. This is done by the  <code>&lt;app&gt;.core/start-app</code> and <code>&lt;app&gt;.core/stop-app</code> functions respectively.</p><p>Luminus provides an <code>&lt;app&gt;.user</code> namespace found in the <code>env/dev/clj/user.clj</code> file. This namespace provides convenience functions for starting and stopping the application states from the REPL:</p><pre><code class="clojure">&#40;ns user
+  &#40;:require &#91;mount.core :as mount&#93;
+            &#91;&lt;app&gt;.config :refer &#91;env&#93;&#93;
+            &lt;app&gt;.core&#41;&#41;
+
+&#40;defn start &#91;&#93;
+  &#40;mount/start-without #'&lt;&lt;project-ns&gt;&gt;.core/repl-server&#41;&#41;
+
+&#40;defn stop &#91;&#93;
+  &#40;mount/stop-except #'&lt;&lt;project-ns&gt;&gt;.core/repl-server&#41;&#41;
+
+&#40;defn restart &#91;&#93;
+  &#40;stop&#41;
+  &#40;start&#41;&#41;
+</code></pre><p>The states can be started selectively by explicitly providing the namespaces to be started and stopped to the <code>start</code> and <code>stop</code> functions:</p><pre><code class="clojure">&#40;mount.core/start #'app.config #'app.db&#41;
+
+&#40;mount.core/stop #'app.config #'app.db&#41;
+</code></pre><p>Alternatively, it's possible to specify the namespaces that should be omitted from the lifecycle using the <code>start-without</code> function:</p><pre><code class="clojure">&#40;start-without #'app.db&#41;
+</code></pre><p>Finally, the states can be replaced by alternate ones such as mock states for testing using the <code>start-with</code> function:</p><pre><code class="clojure">&#40;start-with #'app.db #'app.test.mock-db&#41;
+</code></pre><p>In the above example, the <code>app.db</code> will be replaced by the <code>app.test.mock-db</code> when the the components are loaded.</p><p>Please see the <a href='https://github.com/tolitius/mount'>official documentation</a> for further details on using mount.</p>
+      </div>
+    </div>
+  </div>
+  <div class="column column-25">
+    <div class="column-wrapper">
+      <div id="build-tool-div">
+        <p>Build Tool:
+          <select name="build-tool" id="build-tool" >
+            <option value="lein" >lein</option>
+            <option value="boot" >boot</option>
+          </select>
+        </p>
+      </div>
+      <h2>Topics</h2>
+      <ul>
+        
+        <li >
+          <a href="/docs/guestbook.html">
+            Your First Application
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/repl.html">
+            REPL Driven Development
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/profiles.html">
+            Application Profiles
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/html_templating.html">
+            HTML Templating
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/assets.html">
+            Static Assets
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/clojurescript.html">
+            ClojureScript
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/routes.html">
+            Routing
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/services.html">
+            RESTful Services
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/requests.html">
+            Request types
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/responses.html">
+            Response types
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/websockets.html">
+            Websockets
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/middleware.html">
+            Middleware
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/sessions_cookies.html">
+            Sessions and Cookies
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/input_validation.html">
+            Input Validation
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/security.html">
+            Security
+          </a>
+        </li>
+        
+        <li class="selected" >
+          <a href="/docs/components.html">
+            Component Lifecycle
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/database.html">
+            Database Access
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/migrations.html">
+            Database Migrations
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/logging.html">
+            Logging
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/i18n.html">
+            Internationalization
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/testing.html">
+            Testing
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/servers.html">
+            Server Tuning
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/environment.html">
+            Environment Variables
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/deployment.html">
+            Deployment
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/useful_libraries.html">
+            Useful Libraries
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/apps.html">
+            Sample Applications
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/upgrading.html">
+            Upgrading
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/learning_clojure.html">
+            Clojure Resources
+          </a>
+        </li>
+        
+      </ul>
+      <h2>Books</h2>
+      <ul>
+        <li>
+          <a href="https://pragprog.com/book/dswdcloj2/web-development-with-clojure-second-edition">
+            <img src="/img/wdwc2.png" class="bookimage">
+          </a>
+        </li>
+        <li><a href=""></a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+    </div>
+    <footer>
+      <article class="wrapper">
+        <div class="column-wrapper">
+          <p>
+            Luminus framework is released under the <a href="http://opensource.org/licenses/MIT">MIT License</a>
+            -
+            Copyright ©
+            <span id="cpyear"></span>
+          </p>
+        </div>
+      </article>
+    </footer>
+
+    <script src="/js/highlight.pack.js" type="text/javascript"></script>
+    <script src="/js/site.js" type="text/javascript"></script>
+    
+<script src="/js/docs.js" type="text/javascript"></script>
+
+  </body>
+</html>
