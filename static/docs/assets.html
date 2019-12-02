@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="keywords" content="luminus, clojure, framework, leiningen">
+    <meta name="canonical" content="http://luminusweb.net">
+    <title>Luminus - a Clojure web framework</title>
+    <link href='http://fonts.googleapis.com/css?family=Inconsolata' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.1/styles/color-brewer.min.css">
+    <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/img/favicon.ico" type="image/x-icon">
+    <link href="/css/highlight.css" rel="stylesheet" type="text/css" />
+    <link href="/css/codestyle.css" rel="stylesheet" type="text/css" />
+    <link href="/css/screen.css" rel="stylesheet" type="text/css" />
+    
+  </head>
+  <body>
+    <header>
+      <div class="wrapper">
+        <div class="column-wrapper">
+          <div class="row">
+            <div id="logo">
+              <h1>
+                <a href="/">
+                  <img src="/img/logo.png" alt="Luminus">
+                  Luminus
+                </a>
+              </h1>
+            </div>
+            <nav>
+              <ul>
+                <li >
+                  <a href="/">Home</a>
+                </li>
+                <li  class="selected">
+                  <a href="/docs/guestbook">
+                    <span class="show-on-mobile">Docs</span>
+                    <span class="hide-on-mobile">Documentation</span>
+                  </a>
+                </li>
+                <li >
+                  <a href="/contribute">
+                    <span class="hide-on-mobile">Get Involved</span>
+                    <span class="show-on-mobile">Contrib</span>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+          
+          
+        </div>
+      </div>
+    </header>
+    <div class="wrapper">
+      
+<div class="row">
+  <div class="column column-75">
+    <div class="column-wrapper">
+      <h1>Static Assets</h1>
+      
+      <div id="content">
+        <p>The assets for the application are located under the <code>resources</code> folder. Assets include any non-source files that you may wish to include in the application. These may be database migration files, SQL query files, and so on. The <code>resources/public</code> folder is reserved for assets that will be served directly by the HTTP server. This is where you would place assets such as images and CSS.</p><p>Luminus has integrated support for <a href='http://www.webjars.org/'>WebJars</a> and defaults to including external assets, such as Twitter Bootstrap, via this method. Twitter Bootstrap is included as a dependency in the project <code>&#91;org.webjars.npm/material-icons &quot;0.3.0&quot;&#93;</code>. Its contents are made available using the <a href='https://github.com/weavejester/ring-webjars'>ring-webjars</a> middleware.</p><p>Once the library is included, its assets become available on the classpath and can be accessed in the HTML templates using the <code>/assets</code> prefix. as seen below:</p><pre><code class="xml">{% style &quot;/assets/bulma/css/bulma.min.css&quot; %}
+{% style &quot;/assets/material-icons/css/material-icons.min.css&quot; %}
+</code></pre><p>The <code>ring-webjars</code> library strips out the version number from the included assets. The asset referenced as <code>/assets/bulma/css/bulma.min.css</code> is found on the classpath as <code>/webjars/material-icons/0.3.0/css/material-icons.min.css</code>.</p><p>One common type of static assets are icons. Icons are often times made available by means of a webfont. If your appliction makes use for example of the icons from <a href='https://fontawesome.com'>font-awesome</a>, then you will get, from the web-jar-repository, the font-awesome js and css files. Now when your app is loaded and those files are not cached on the client side you will have to send those files over the network, which depending on the connection quality can slow down your appliction start-up-time considerably. In fact the static file for font-awesome may often times be the single most largest file you are serving to the clients. Now should you find that the inital load times for your app are of concern to you, then consider the following. How many of the icons do you actually need? Do you need js for layering icons? If you find, that you are using only a small fraction of all the icons you ship with your app, then consider creating your own custom web-font with just the subset of icons that your application needs. This can be done easly for example using <a href='http://fontello.com/'>fontello</a>.</p>
+      </div>
+    </div>
+  </div>
+  <div class="column column-25">
+    <div class="column-wrapper">
+      <div id="build-tool-div">
+        <p>Build Tool:
+          <select name="build-tool" id="build-tool" >
+            <option value="lein" >lein</option>
+            <option value="boot" >boot</option>
+          </select>
+        </p>
+      </div>
+      <h2>Topics</h2>
+      <ul>
+        
+        <li >
+          <a href="/docs/guestbook.html">
+            Your First Application
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/repl.html">
+            REPL Driven Development
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/profiles.html">
+            Application Profiles
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/html_templating.html">
+            HTML Templating
+          </a>
+        </li>
+        
+        <li class="selected" >
+          <a href="/docs/assets.html">
+            Static Assets
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/clojurescript.html">
+            ClojureScript
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/routes.html">
+            Routing
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/services.html">
+            RESTful Services
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/requests.html">
+            Request types
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/responses.html">
+            Response types
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/websockets.html">
+            Websockets
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/middleware.html">
+            Middleware
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/sessions_cookies.html">
+            Sessions and Cookies
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/input_validation.html">
+            Input Validation
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/security.html">
+            Security
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/components.html">
+            Component Lifecycle
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/database.html">
+            Database Access
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/migrations.html">
+            Database Migrations
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/logging.html">
+            Logging
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/i18n.html">
+            Internationalization
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/testing.html">
+            Testing
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/servers.html">
+            Server Tuning
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/environment.html">
+            Environment Variables
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/deployment.html">
+            Deployment
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/useful_libraries.html">
+            Useful Libraries
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/apps.html">
+            Sample Applications
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/upgrading.html">
+            Upgrading
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/learning_clojure.html">
+            Clojure Resources
+          </a>
+        </li>
+        
+      </ul>
+      <h2>Books</h2>
+      <ul>
+        <li>
+          <a href="https://pragprog.com/book/dswdcloj2/web-development-with-clojure-second-edition">
+            <img src="/img/wdwc2.png" class="bookimage">
+          </a>
+        </li>
+        <li><a href=""></a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+    </div>
+    <footer>
+      <article class="wrapper">
+        <div class="column-wrapper">
+          <p>
+            Luminus framework is released under the <a href="http://opensource.org/licenses/MIT">MIT License</a>
+            -
+            Copyright ©
+            <span id="cpyear"></span>
+          </p>
+        </div>
+      </article>
+    </footer>
+
+    <script src="/js/highlight.pack.js" type="text/javascript"></script>
+    <script src="/js/site.js" type="text/javascript"></script>
+    
+<script src="/js/docs.js" type="text/javascript"></script>
+
+  </body>
+</html>

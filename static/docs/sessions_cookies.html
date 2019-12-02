@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="keywords" content="luminus, clojure, framework, leiningen">
+    <meta name="canonical" content="http://luminusweb.net">
+    <title>Luminus - a Clojure web framework</title>
+    <link href='http://fonts.googleapis.com/css?family=Inconsolata' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.1/styles/color-brewer.min.css">
+    <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/img/favicon.ico" type="image/x-icon">
+    <link href="/css/highlight.css" rel="stylesheet" type="text/css" />
+    <link href="/css/codestyle.css" rel="stylesheet" type="text/css" />
+    <link href="/css/screen.css" rel="stylesheet" type="text/css" />
+    
+  </head>
+  <body>
+    <header>
+      <div class="wrapper">
+        <div class="column-wrapper">
+          <div class="row">
+            <div id="logo">
+              <h1>
+                <a href="/">
+                  <img src="/img/logo.png" alt="Luminus">
+                  Luminus
+                </a>
+              </h1>
+            </div>
+            <nav>
+              <ul>
+                <li >
+                  <a href="/">Home</a>
+                </li>
+                <li  class="selected">
+                  <a href="/docs/guestbook">
+                    <span class="show-on-mobile">Docs</span>
+                    <span class="hide-on-mobile">Documentation</span>
+                  </a>
+                </li>
+                <li >
+                  <a href="/contribute">
+                    <span class="hide-on-mobile">Get Involved</span>
+                    <span class="show-on-mobile">Contrib</span>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+          
+          
+        </div>
+      </div>
+    </header>
+    <div class="wrapper">
+      
+<div class="row">
+  <div class="column column-75">
+    <div class="column-wrapper">
+      <h1>Sessions and Cookies</h1>
+      
+      <h2>Contents</h2>
+      <ol class="contents"><li><a href="#sessions">Sessions</a></li><li><a href="#accessing_the_session">Accessing the session</a></li><li><a href="#flash_sessions">Flash sessions</a></li><li><a href="#cookies">Cookies</a></li></ol>
+      
+      <div id="content">
+        <h2 id="sessions">Sessions</h2><p>Luminus defaults to using in-memory sessions.</p><p>When using the <a href='http://immutant.org/'>Immutant</a> server the sessions are backed by the servlet session provided by the <a href='http://immutant.org/documentation/2.0.2/apidoc/immutant.web.middleware.html#var-wrap-session'>wrap-session</a> middleware.</p><p>The session middleware is initialized in the <code>&lt;app&gt;.middleware</code> namespace by the <code>wrap-base</code> function. Session timeout is specified in seconds and defaults to 30 minutes of inactivity.</p><pre><code class="clojure">&#40;defn wrap-base &#91;handler&#93;
+  &#40;-&gt; handler
+      wrap-dev
+      wrap-formats
+      wrap-webjars
+      &#40;wrap-defaults
+        &#40;-&gt; site-defaults
+            &#40;assoc-in &#91;:security :anti-forgery&#93; false&#41;
+            &#40;dissoc :session&#41;&#41;&#41;
+      wrap-flash
+      wrap-session
+      wrap-context
+      wrap-internal-error&#41;&#41;
+</code></pre><p>Otherwise, sessions are backed by the <a href='https://github.com/boechat107/ring-ttl-session'>ring-ttl-session</a> library. It provides a session store that stores the data in-memory with a time-to-live (TTL).</p><p>We can easily swap the default memory store for a different one, such as a cookie store. Below, we explicitly specify the <code>ring.middleware.session.cookie/cookie-store</code> with the name <code>example-app-session</code> as our session store:</p><pre><code class="clojure">&#40;wrap-defaults
+  &#40;-&gt; site-defaults
+      &#40;assoc-in &#91;:security :anti-forgery&#93; false&#41;
+      &#40;assoc-in &#91;:session :store&#93; &#40;cookie-store&#41;&#41;
+      &#40;assoc-in &#91;:session :cookie-name&#93; &quot;example-app-sessions&quot;&#41;&#41;&#41;
+</code></pre><p>We can also specify the maximum age for our session cookies using the <code>:max-age</code> key:</p><pre><code class="clojure">&#40;wrap-defaults
+  &#40;-&gt; site-defaults
+      &#40;assoc-in &#91;:security :anti-forgery&#93; false&#41;
+      &#40;assoc-in &#91;:session :store&#93; &#40;cookie-store&#41;&#41;
+      &#40;assoc-in &#91;:session :cookie-attrs&#93; {:max-age 10}&#41;&#41;&#41;
+</code></pre><p>When using cookie store it is also important to specify a secret key (16 characters) for cookie encryption. Otherwise a random one will be generated each time application is started and sessions created before will be lost.</p><pre><code class="clojure">&#40;wrap-defaults
+  &#40;-&gt; site-defaults
+      &#40;assoc-in &#91;:security :anti-forgery&#93; false&#41;
+      &#40;assoc-in &#91;:session :store&#93; &#40;cookie-store {:key &quot;BuD3KgdAXhDHrJXu&quot;}&#41;&#41;
+      &#40;assoc-in &#91;:session :cookie-name&#93; &quot;example-app-sessions&quot;&#41;&#41;&#41;
+</code></pre><p>You may also wish to take a look at <a href='http://redis.io/'>Redis</a> for your session store. Creating Redis sessions is easy thanks to <a href='https://github.com/ptaoussanis/carmine'>Carmine</a>. You would simply need to define a connection and use the <code>taoensso.carmine.ring/carmine-store</code> with it:</p><pre><code class="clojure">
+&#40;def redis-conn {:pool {&lt;opts&gt;} :spec {&lt;opts&gt;}}&#41;
+
+
+&#40;wrap-defaults
+  &#40;-&gt; site-defaults
+      &#40;assoc-in &#91;:security :anti-forgery&#93; false&#41;
+      &#40;assoc-in &#91;:session :store&#93; &#40;carmine-store redis-conn&#41;&#41;&#41;&#41;
+</code></pre><p>For further information, please see the <a href='http://ptaoussanis.github.io/carmine/taoensso.carmine.ring.html'>official API documentation</a>.</p><h3 id="accessing&#95;the&#95;session">Accessing the session</h3><p>Ring tracks sessions using the request map and the current session will be found under the <code>:session</code> key. Below we have a simple example of interaction with the session.</p><pre><code class="clojure">&#40;ns myapp.home
+  &#40;:require
+   &#91;ring.util.response :refer &#91;response&#93;&#93;&#41;&#41;
+
+&#40;defn set-user! &#91;id {session :session}&#93;
+  &#40;-&gt; &#40;response &#40;str &quot;User set to: &quot; id&#41;&#41;
+      &#40;assoc :session &#40;assoc session :user id&#41;&#41;
+      &#40;assoc :headers {&quot;Content-Type&quot; &quot;text/plain&quot;}&#41;&#41;&#41;
+
+&#40;defn remove-user! &#91;{session :session}&#93;
+  &#40;-&gt; &#40;response &quot;User removed&quot;&#41;
+      &#40;assoc :session &#40;dissoc session :user&#41;&#41;
+      &#40;assoc :headers {&quot;Content-Type&quot; &quot;text/plain&quot;}&#41;&#41;&#41;
+
+&#40;defn clear-session! &#91;&#93;
+  &#40;-&gt; &#40;response &quot;Session cleared&quot;&#41;
+      &#40;dissoc :session&#41;
+      &#40;assoc :headers {&quot;Content-Type&quot; &quot;text/plain&quot;}&#41;&#41;&#41;
+
+&#40;def app-routes
+  &#91;&quot;&quot;
+   {:middleware &#91;middleware/wrap-csrf
+                 middleware/wrap-formats&#93;}
+   &#91;&quot;/login/:id&quot; {:get &#40;fn &#91;{:keys &#91;path-params&#93; :as req}&#93;
+                         &#40;set-user! &#40;:id path-params&#41; req&#41;&#41;}&#93;
+   &#91;&quot;/remove&quot; {:get remove-user!}&#93;
+   &#91;&quot;/logout&quot; {:get clear-session!&#93;&#93;&#41;
+</code></pre><p>Note that the the default <code>&lt;app&gt;.layout/render</code> function does not allow setting the session. The function is intended to render the page and this should not be conflated with any controller actions. In a scenario where you wish to set the session and render a page a redirect is the recommended approach.</p><h3 id="flash&#95;sessions">Flash sessions</h3><p>Flash sessions have a lifespan of a single request, these can be accessed using the <code>:flash</code> key instead of the <code>:session</code> key used for regular sessions.</p><h2 id="cookies">Cookies</h2><p>Cookies are found under the <code>:cookies</code> key of the request, eg:</p><pre><code class="clojure">{:cookies {&quot;username&quot; {:value &quot;Bob&quot;}}}
+
+</code></pre><p>Conversely, to set a cookie on the response we simply update the response map with the desired cookie value:</p><pre><code class="clojure">&#40;-&gt; &quot;response with a cookie&quot; response &#40;assoc-in &#91;:cookies &quot;username&quot; :value&#93; &quot;Alice&quot;&#41;&#41;
+</code></pre><p>Cookies can contain the following additional attributes in addition to the <code>:value</code> key:</p><ul><li>:domain - restrict the cookie to a specific domain</li><li>:path - restrict the cookie to a specific path</li><li>:secure - restrict the cookie to HTTPS URLs if true</li><li>:http-only - restrict the cookie to HTTP if true (not accessible via e.g. JavaScript)</li><li>:max-age - the number of seconds until the cookie expires</li><li>:expires - a specific date and time the cookie expires</li></ul>
+      </div>
+    </div>
+  </div>
+  <div class="column column-25">
+    <div class="column-wrapper">
+      <div id="build-tool-div">
+        <p>Build Tool:
+          <select name="build-tool" id="build-tool" >
+            <option value="lein" >lein</option>
+            <option value="boot" >boot</option>
+          </select>
+        </p>
+      </div>
+      <h2>Topics</h2>
+      <ul>
+        
+        <li >
+          <a href="/docs/guestbook.html">
+            Your First Application
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/repl.html">
+            REPL Driven Development
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/profiles.html">
+            Application Profiles
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/html_templating.html">
+            HTML Templating
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/assets.html">
+            Static Assets
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/clojurescript.html">
+            ClojureScript
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/routes.html">
+            Routing
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/services.html">
+            RESTful Services
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/requests.html">
+            Request types
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/responses.html">
+            Response types
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/websockets.html">
+            Websockets
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/middleware.html">
+            Middleware
+          </a>
+        </li>
+        
+        <li class="selected" >
+          <a href="/docs/sessions_cookies.html">
+            Sessions and Cookies
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/input_validation.html">
+            Input Validation
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/security.html">
+            Security
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/components.html">
+            Component Lifecycle
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/database.html">
+            Database Access
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/migrations.html">
+            Database Migrations
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/logging.html">
+            Logging
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/i18n.html">
+            Internationalization
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/testing.html">
+            Testing
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/servers.html">
+            Server Tuning
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/environment.html">
+            Environment Variables
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/deployment.html">
+            Deployment
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/useful_libraries.html">
+            Useful Libraries
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/apps.html">
+            Sample Applications
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/upgrading.html">
+            Upgrading
+          </a>
+        </li>
+        
+        <li >
+          <a href="/docs/learning_clojure.html">
+            Clojure Resources
+          </a>
+        </li>
+        
+      </ul>
+      <h2>Books</h2>
+      <ul>
+        <li>
+          <a href="https://pragprog.com/book/dswdcloj2/web-development-with-clojure-second-edition">
+            <img src="/img/wdwc2.png" class="bookimage">
+          </a>
+        </li>
+        <li><a href=""></a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+    </div>
+    <footer>
+      <article class="wrapper">
+        <div class="column-wrapper">
+          <p>
+            Luminus framework is released under the <a href="http://opensource.org/licenses/MIT">MIT License</a>
+            -
+            Copyright ©
+            <span id="cpyear"></span>
+          </p>
+        </div>
+      </article>
+    </footer>
+
+    <script src="/js/highlight.pack.js" type="text/javascript"></script>
+    <script src="/js/site.js" type="text/javascript"></script>
+    
+<script src="/js/docs.js" type="text/javascript"></script>
+
+  </body>
+</html>
