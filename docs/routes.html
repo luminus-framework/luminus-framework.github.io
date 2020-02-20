@@ -143,7 +143,7 @@ body params: {:password &quot;xyz&quot;, :username &quot;xyz&quot;}
   &#91;&quot;/files/:filename&quot; {:get &#40;fn &#91;{{:keys &#91;filename&#93;} :path-params}&#93;
 
                               &#40;file-response &#40;str resource-path filename&#41;&#41;&#41;}&#93;&#93;&#41;
-</code></pre><p>Th <code>:file</code> request form parameter points to a map containing the description of the file that will be uploaded. Our <code>upload-file</code> function above uses <code>:tempfile</code>, <code>:size</code> and <code>:filename</code> keys from this map to save the file on disk.</p><p>A file upload progress listener can be added in the <code>&lt;app&gt;.middleware/wrap-base</code> function by updating <code>wrap-defaults</code> as follows:</p><pre><code class="clojure">&#40;wrap-defaults
+</code></pre><p>The <code>:file</code> request form parameter points to a map containing the description of the file that will be uploaded. Our <code>upload-file</code> function above uses <code>:tempfile</code>, <code>:size</code> and <code>:filename</code> keys from this map to save the file on disk.</p><p>A file upload progress listener can be added in the <code>&lt;app&gt;.middleware/wrap-base</code> function by updating <code>wrap-defaults</code> as follows:</p><pre><code class="clojure">&#40;wrap-defaults
   &#40;-&gt; site-defaults
       &#40;assoc-in &#91;:security :anti-forgery&#93; false&#41;
       &#40;dissoc :session&#41;
