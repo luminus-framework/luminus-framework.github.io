@@ -326,7 +326,7 @@ cd guestbook
     &#91;mount.core :refer &#91;defstate&#93;&#93;
     &#91;guestbook.config :refer &#91;env&#93;&#93;&#41;&#41;
 
-&#40;defstate &#94;&#94;:dynamic &#42;db&#42;
+&#40;defstate &#94;:dynamic &#42;db&#42;
            :start &#40;conman/connect! {:jdbc-url &#40;env :database-url&#41;}&#41;
            :stop &#40;conman/disconnect! &#42;db&#42;&#41;&#41;
 
@@ -577,8 +577,7 @@ form, .error {
     &#40;f&#41;&#41;&#41;
 
 &#40;deftest test-message
-  &#40;jdbc/with-db-transaction &#91;t-conn &#42;db&#42;&#93;
-    &#40;jdbc/db-set-rollback-only! t-conn&#41;
+  &#40;jdbc/with-transaction &#91;t-conn &#42;db&#42;&#93;
     &#40;let &#91;timestamp &#40;java.time.LocalDateTime/now&#41;&#93;
       &#40;is &#40;= 1 &#40;db/save-message!
                 t-conn
