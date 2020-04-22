@@ -112,6 +112,7 @@ After=network.target
 WorkingDirectory=/var/myapp
 EnvironmentFile=-/var/myapp/env
 Environment=&quot;DATABASE&#95;URL=jdbc:postgresql://localhost/app?user=app&#95;user&amp;password=secret&quot;
+SuccessExitStatus=143
 ExecStart=/usr/bin/java -jar /var/myapp/myapp.jar
 User=deploy
 
