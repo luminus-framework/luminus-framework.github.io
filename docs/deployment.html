@@ -120,7 +120,7 @@ User=deploy
 WantedBy=multi-user.target
 </code></pre><p>The <code>WantedBy=</code> is the target level that this unit is a part of. To find the default run level for your system run:</p><pre><code>systemctl get-default</code></pre><p>Note that by default JVM is fairly aggressive about memory usage. If you'd like to reduce the amount of memory used then you can add the following line under the <code>&#91;Service&#93;</code> configuration:</p><pre><code>&#91;Service&#93;
 ...
-&#95;JAVA&#95;OPTIONS=&quot;-Xmx256m&quot;
+Environment=JAVA&#95;TOOL&#95;OPTIONS=&quot;-Xmx256m&quot;
 ExecStart=/usr/bin/java -jar /var/myapp/myapp.jar
 </code></pre><p>This will limit the maximum amount of memory that the JVM is allowed to use.  Now we can tell <code>systemd</code> to start the application everytime the system reboots with the following commands:</p><pre><code>sudo systemctl daemon-reload
 sudo systemctl enable myapp.service
