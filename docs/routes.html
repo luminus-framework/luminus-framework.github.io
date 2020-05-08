@@ -106,6 +106,7 @@ body params: {:password &quot;xyz&quot;, :username &quot;xyz&quot;}
 &lt;/form&gt;
 </code></pre><p>we could then render the page and handle the file upload as follows:</p><pre><code class="clojure">&#40;ns myapp.upload
   &#40;:require &#91;myapp.layout :as layout&#93;
+            &#91;clojure.java.io :as io&#93; 
             &#91;ring.util.response :refer &#91;redirect file-response&#93;&#93;&#41;
   &#40;:import &#91;java.io File FileInputStream FileOutputStream&#93;&#41;&#41;
 
@@ -117,16 +118,11 @@ body params: {:password &quot;xyz&quot;, :username &quot;xyz&quot;}
     &quot;utf-8&quot;&#41;&#41;
 
 &#40;defn upload-file
-  &quot;uploads a file to the target folder
-   when :create-path? flag is set to true then the target path will be created&quot;
+  &quot;uploads a file to the target folder&quot;
   &#91;path {:keys &#91;tempfile size filename&#93;}&#93;
-  &#40;try
-    &#40;with-open &#91;in &#40;new FileInputStream tempfile&#41;
-                out &#40;new FileOutputStream &#40;file-path path filename&#41;&#41;&#93;
-      &#40;let &#91;source &#40;.getChannel in&#41;
-            dest   &#40;.getChannel out&#41;&#93;
-        &#40;.transferFrom dest source 0 &#40;.size source&#41;&#41;
-        &#40;.flush out&#41;&#41;&#41;&#41;&#41;
+  &#40;with-open &#91;in &#40;io/input-stream tempfile&#41;
+              out &#40;io/output-stream &#40;file-path path filename&#41;&#41;&#93;
+    &#40;io/copy in out&#41;&#41;&#41;
 
 &#40;def home-routes
   &#91;&quot;&quot;
