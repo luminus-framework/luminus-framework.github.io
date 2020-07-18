@@ -93,7 +93,6 @@ body params: {:password &quot;xyz&quot;, :username &quot;xyz&quot;}
   {:get &#40;fn &#91;request&#93; {:status 200 :body &quot;Hello World&quot;}&#41;}
  &#91;&quot;/is-403&quot;
   {:get &#40;fn &#91;request&#93; {:status 403 :body &quot;&quot;}&#41;}&#93;
- 
  &#91;&quot;/is-json&quot;
   {:get &#40;fn &#91;request&#93; {:status 200 :headers {&quot;Content-Type&quot; &quot;application/json&quot;} :body &quot;{}&quot;}&#41;}&#93;&#93;
 </code></pre><h2 id="static&#95;resources">Static Resources</h2><p>By default, any resources located under the <code>resources/public</code> directory will be available to the clients. This is handled by the <code>reitit.ring/resource-handler</code> handler found in the <code>&lt;app&gt;.handler</code> namespace:</p><pre><code class="clojure">&#40;ring/create-resource-handler {:path &quot;/&quot;}&#41;
