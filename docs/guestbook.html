@@ -558,7 +558,7 @@ form, .error {
 	margin-bottom: 50px;
 	position: relative;
 }
-</code></pre><p>When we reload the page in the browser we should be greeted by the guestbook page. We can test that everything is working as expected by adding a comment in our comment form.</p><h2 id="adding&#95;some&#95;tests">Adding some tests</h2><p>Now that we have our application working we can add some tests for it. Let's open up the <code>test/clj/guestbook/test/db/core.clj</code> namespace and update it as follows:</p><pre><code class="clojure">&#40;ns guestbook.test.db.core
+</code></pre><p>When we reload the page in the browser we should be greeted by the guestbook page. We can test that everything is working as expected by adding a comment in our comment form.</p><h2 id="adding&#95;some&#95;tests">Adding some tests</h2><p>Now that we have our application working we can add some tests for it. Let's open up the <code>test/clj/guestbook/db/core&#95;test.clj</code> namespace and update it as follows:</p><pre><code class="clojure">&#40;ns guestbook.db.core-test
   &#40;:require
    &#91;guestbook.db.core :refer &#91;&#42;db&#42;&#93; :as db&#93;
    &#91;java-time.pre-java8&#93;
