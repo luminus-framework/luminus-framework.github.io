@@ -60,7 +60,7 @@
       <h1>Logging</h1>
       
       <h2>Contents</h2>
-      <ol class="contents"><li><a href="#logging">Logging</a></li><li><a href="#logging_configuration">Logging Configuration</a></li></ol>
+      <ol class="contents"><li><a href="#logging">Logging</a></li><li><a href="#logging_configuration">Logging Configuration</a></li><li><a href="#logging_http_requests">Logging HTTP requests</a></li></ol>
       
       <div id="content">
         <h2 id="logging">Logging</h2><p>By default, logging functionality is provided by the <a href='https://github.com/clojure/tools.logging'>clojure.tools.logging</a> library. The library provides macros that delegate to a specific logging implementation. The default implementation used in Luminus is the <a href='http://logback.qos.ch/'>logback</a> library.</p><p>There are six log levels in <code>clojure.tools.logging</code>, and any Clojure data structures can be logged directly. The log levels are <code>trace</code>, <code>debug</code>, <code>info</code>, <code>warn</code>, <code>error</code>, and <code>fatal</code>.</p><pre><code class="clojure">&#40;ns example
@@ -135,7 +135,30 @@
     &lt;/root&gt;
 &lt;/configuration&gt;
 </code></pre><p>Then we can start the app with the following flag to have it use this logging configuration:</p><pre><code>java -Dlogback.configurationFile=prod-log-config.xml -jar myapp.jar
-</code></pre><p>Please refer to the <a href='http://logback.qos.ch/manual/configuration.html'>official documentation</a> for further information on configuring <code>logback</code>.</p>
+</code></pre><p>Please refer to the <a href='http://logback.qos.ch/manual/configuration.html'>official documentation</a> for further information on configuring <code>logback</code>.</p><h3 id="logging&#95;http&#95;requests">Logging HTTP requests</h3><p>You can use <a href='https://github.com/nberger/ring-logger#usage'>ring-logger</a> in order to log HTTP requests:</p><pre><code class="clojure"># project.clj
+
+  :dependencies &#91;...
+                 &#91;ring-logger &quot;1.1.1&quot;&#93;
+                &#93;
+
+</code></pre><pre><code class="clojure">&#40;ns myapp.routes.home
+  &#40;:require
+   ...
+   &#91;ring.logger&#93;&#41;&#41;
+
+
+&#40;defn home-routes &#91;&#93;
+  &#91; &quot;&quot; 
+   {:middleware &#91;
+                 ring.logger/wrap-with-logger
+                 middleware/wrap-csrf
+                 middleware/wrap-formats
+                 &#93;}
+   &#91;&quot;/&quot; {:get home-page}&#93;
+   &#91;&quot;/about&quot; {:get about-page}&#93;&#93;&#41;
+  ...
+
+
       </div>
     </div>
   </div>
